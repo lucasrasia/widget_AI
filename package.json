@@ -8,14 +8,18 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "usage-bridge": "node scripts/codex-usage-bridge.mjs",
+    "desktop:dev": "powershell -ExecutionPolicy Bypass -File scripts/tauri.ps1 dev",
+    "desktop:build": "powershell -ExecutionPolicy Bypass -File scripts/tauri.ps1 build",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.11.1",
     "lucide-react": "^1.34.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.11.4",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
