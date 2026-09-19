@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "WidgetaAI",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "identifier": "com.lucasrasia.widgetaai",
   "build": {
     "frontendDist": "../dist",
@@ -17,18 +17,33 @@
         "height": 148,
         "minWidth": 400,
         "minHeight": 148,
-        "maxWidth": 400,
-        "maxHeight": 320,
+        "maxWidth": 640,
+        "maxHeight": 500,
         "resizable": false,
         "fullscreen": false,
         "decorations": false,
         "transparent": true,
         "alwaysOnTop": true,
         "shadow": false
+      },
+      {
+        "label": "tooltip",
+        "title": "WidgetaAI Tooltip",
+        "url": "index.html?tooltip=1",
+        "width": 400,
+        "height": 132,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": false,
+        "focus": false,
+        "shadow": false
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' asset: data:; media-src 'self' asset:; connect-src ipc: http://ipc.localhost"
     }
   },
   "bundle": {

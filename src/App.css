@@ -18,6 +18,11 @@
   background: transparent;
 }
 
+html:has(.tooltip-window), body:has(.tooltip-window), body:has(.tooltip-window) #root { background: transparent; }
+.tooltip-window { width: 400px; height: 132px; position: relative; background: transparent; }
+.tooltip-window .model-tooltip { bottom: 25px; }
+.tooltip-window .model-tooltip::before { bottom: -25px; height: 25px; }
+
 .widget-shell {
   width: 400px;
   height: 320px;
@@ -25,6 +30,7 @@
   flex: none;
 }
 
+.widget-shell.is-expanded { width: 640px; height: 500px; }
 .tauri-shell .widget-shell { width: 100vw; height: 100vh; }
 
 .compact-widget {
@@ -42,7 +48,12 @@
   color: #fff;
   background: #030303;
   box-shadow: none;
+  transition: width 220ms ease, height 220ms ease;
 }
+
+.compact-widget.is-expanded { width: 640px; height: 500px; }
+.compact-widget.is-expanded .mascot-stage,
+.compact-widget.is-expanded .compact-content { height: 148px; align-self: start; z-index: 1; }
 
 .mascot-stage {
   min-width: 0;
@@ -182,30 +193,10 @@
 }
 
 .model-ring svg { width: 19px; height: 19px; stroke-width: 1.8; }
+.model-ring img { width: 19px; height: 19px; display: block; object-fit: contain; }
 
 .period-row { height: 20px; bottom: 9px; }
 .period-row > strong { color: #eaf5ff; font-size: 11px; letter-spacing: -.15px; white-space: nowrap; }
-.period-name-cell { min-width: 0; display: flex; align-items: center; justify-content: center; gap: 4px; }
-.period-name-cell > strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
-
-.create-period, .session-stop, .compact-period-form button {
-  border: 0;
-  color: #fff;
-  background: transparent;
-}
-
-.create-period { padding: 2px 3px; font-size: 8px; font-weight: 900; letter-spacing: -.1px; }
-.create-period:hover, .create-period:focus-visible { color: #56a9ff; }
-.session-stop { width: 14px; height: 14px; display: grid; flex: none; place-items: center; border-radius: 50%; background: #252525; }
-.session-stop:hover, .session-stop:focus-visible { background: #383838; }
-.session-stop svg { width: 6px; height: 6px; fill: currentColor; }
-
-.compact-period-form { min-width: 0; display: flex; align-items: center; gap: 2px; }
-.compact-period-form input { width: 66px; min-width: 0; border: 1px solid #48484b; border-radius: 999px; padding: 3px 5px; color: #fff; background: #151515; font-size: 7px; font-weight: 700; outline: none; }
-.compact-period-form input:focus { border-color: #2c86ed; }
-.compact-period-form button { width: 15px; height: 15px; display: grid; flex: none; place-items: center; border-radius: 50%; background: #2c86ed; }
-.compact-period-form button:disabled { opacity: .4; }
-.compact-period-form svg { width: 7px; height: 7px; fill: currentColor; }
 
 .model-tooltip {
   width: 280px;
@@ -225,20 +216,71 @@
 }
 
 .model-tooltip.is-open { opacity: 1; transform: translateY(0); pointer-events: auto; }
+.model-tooltip::before { content: ''; position: absolute; right: 0; bottom: -40px; left: 0; height: 40px; }
 .model-tooltip::after { content: ''; width: 0; height: 0; position: absolute; bottom: -25px; left: calc(var(--tooltip-arrow) - 20px); border-top: 26px solid #030303; border-right: 20px solid transparent; border-left: 20px solid transparent; }
 .tooltip-heading { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 5px; }
 .tooltip-heading strong { font-size: 14px; letter-spacing: -.3px; }
 .tooltip-heading b { font-size: 11px; }
 .tooltip-mark { width: 22px; height: 22px; display: grid; place-items: center; border: 1px solid #fff; border-radius: 50%; font-size: 7px; font-weight: 900; }
 .tooltip-mark svg { width: 14px; height: 14px; }
+.tooltip-mark img { width: 14px; height: 14px; display: block; object-fit: contain; }
 .tooltip-track { height: 8px; margin-top: 6px; overflow: hidden; border-radius: 999px; background: #77777a; }
 .tooltip-track i { display: block; height: 100%; border-radius: inherit; background: #fff; transition: width 240ms ease; }
 .tooltip-values { display: flex; justify-content: space-between; gap: 10px; margin-top: 4px; }
 .tooltip-values strong { font-size: 8px; white-space: nowrap; }
 .tooltip-meta { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; color: #949498; font-size: 6px; font-weight: 800; letter-spacing: .1px; text-transform: uppercase; }
 
-.visual-chevron { width: 23px; height: 42px; display: grid; position: absolute; right: 7px; top: 50%; place-items: center; transform: translateY(-50%); color: #fff; }
-.visual-chevron svg { width: 20px; height: 20px; stroke-width: 3; }
+.expand-toggle { width: 32px; height: 32px; display: grid; position: absolute; z-index: 3; top: 8px; right: 8px; place-items: center; border: 0; border-radius: 50%; padding: 0; color: #fff; background: #1b1b1b; transition: background 160ms ease, transform 160ms ease; }
+.expand-toggle:hover, .expand-toggle:focus-visible { background: #303030; transform: translateY(-1px); outline: none; }
+.expand-toggle:focus-visible { box-shadow: 0 0 0 1px #fff; }
+.expand-toggle svg { width: 19px; height: 19px; stroke-width: 3; }
+
+.expanded-usage { display: flex; position: absolute; z-index: 2; top: 148px; right: 0; bottom: 0; left: 0; flex-direction: column; padding: 13px 18px 18px; border-top: 1px solid #242424; background: #030303; }
+.expanded-usage__title { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 7px; }
+.expanded-usage__title strong { font-size: 12px; font-weight: 900; letter-spacing: .45px; }
+.expanded-usage__title span { overflow: hidden; color: #949498; font-size: 8px; font-weight: 800; letter-spacing: .15px; text-overflow: ellipsis; white-space: nowrap; text-transform: uppercase; }
+.expanded-usage__list { min-height: 0; display: grid; flex: 1; align-content: start; grid-auto-rows: min-content; gap: 9px; overflow-y: auto; padding-right: 3px; scrollbar-width: thin; scrollbar-color: #555 transparent; }
+.expanded-model-usage { min-height: 132px; border-radius: 22px; padding: 12px 14px 10px; background: #111; }
+.expanded-model-usage .tooltip-heading strong { font-size: 16px; }
+.expanded-model-usage .tooltip-heading b { color: #eaf5ff; font-size: 12px; white-space: nowrap; }
+.usage-window { margin-top: 8px; }
+.usage-window > div:first-child { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+.usage-window > div:first-child span, .usage-window > div:first-child strong, .usage-window small { font-size: 9px; font-weight: 800; letter-spacing: .1px; }
+.usage-window > div:first-child span, .usage-window small { color: #9e9ea2; }
+.usage-window .tooltip-track { height: 8px; margin: 0; }
+.usage-window small { display: block; margin-top: 3px; text-align: right; }
+.expanded-model-usage .tooltip-meta { margin-top: 6px; font-size: 7px; }
+
+.period-history { max-height: 126px; display: grid; gap: 6px; overflow-y: auto; margin-top: 8px; scrollbar-width: thin; scrollbar-color: #555 transparent; }
+.period-history:empty { display: none; }
+.analysis-session { min-height: 54px; display: grid; grid-template-columns: minmax(110px, 1fr) auto auto auto; align-items: center; gap: 14px; border: 1px solid #29292c; border-radius: 13px; padding: 7px 9px 7px 12px; background: #131313; }
+.analysis-session.is-running { border-color: #3d3d41; background: #1b1b1d; }
+.analysis-session.is-paused { border-color: #303034; background: #161618; }
+.analysis-session__identity { min-width: 0; display: grid; gap: 2px; }
+.analysis-session__identity small, .analysis-session__metric span { color: #8e8e93; font-size: 7px; font-weight: 900; letter-spacing: .4px; }
+.analysis-session.is-running .analysis-session__identity small { color: #b8b8bc; }
+.analysis-session__identity strong { overflow: hidden; color: #fff; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.analysis-session__metric { display: grid; gap: 2px; text-align: right; }
+.analysis-session__metric b { color: #fff; font-family: 'DM Mono', monospace; font-size: 10px; white-space: nowrap; }
+.analysis-session__actions { display: flex; align-items: center; justify-content: flex-end; gap: 5px; }
+.analysis-session__actions button { border: 0; font-weight: 900; }
+.period-stop, .period-resume { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 5px 7px; color: #111; background: #c8c8cb; font-size: 7px; }
+.period-stop:hover, .period-stop:focus-visible, .period-resume:hover, .period-resume:focus-visible { background: #e0e0e2; outline: none; }
+.period-stop svg, .period-resume svg { width: 7px; height: 7px; fill: currentColor; }
+.period-delete { width: 25px; height: 25px; display: grid; place-items: center; border-radius: 50%; padding: 0; color: #9b9ba0; background: #27272a; }
+.period-delete:hover, .period-delete:focus-visible { color: #fff; background: #3a2020; outline: none; }
+.period-delete svg { width: 12px; height: 12px; }
+.analysis-period { min-height: 48px; margin-top: 8px; border: 2px dashed #636367; border-radius: 15px; padding: 4px 11px; }
+.analysis-period__create { width: 100%; height: 36px; border: 0; color: #a7a7ab; background: transparent; font-size: 13px; font-weight: 800; }
+.analysis-period__create:hover, .analysis-period__create:focus-visible { color: #fff; outline: none; }
+.analysis-period__create span { margin-right: 4px; font-size: 18px; vertical-align: -1px; }
+.analysis-period__form { height: 36px; display: flex; align-items: center; gap: 7px; }
+.analysis-period__form input { min-width: 0; flex: 1; border: 0; padding: 4px 2px; color: #fff; background: transparent; font-size: 13px; font-weight: 700; outline: none; }
+.analysis-period__form input::placeholder { color: #8c8c91; }
+.analysis-period__form button, .analysis-period__heading button { border: 0; color: #050505; background: #fff; font-weight: 900; }
+.analysis-period__form button { width: 30px; height: 30px; display: grid; flex: none; place-items: center; border-radius: 50%; }
+.analysis-period__form button:disabled { opacity: .35; }
+.analysis-period__form svg { width: 13px; height: 13px; fill: currentColor; }
 
 .sr-only { width: 1px; height: 1px; position: absolute; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
 
@@ -248,5 +290,5 @@
 
 @media (prefers-reduced-motion: reduce) {
   .mascot-orb--completed .mascot-orb__frame { animation: none; }
-  .model-ring, .tooltip-track i, .model-tooltip { transition: none; }
+  .compact-widget, .model-ring, .tooltip-track i, .model-tooltip, .expand-toggle { transition: none; }
 }
