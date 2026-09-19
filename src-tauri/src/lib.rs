@@ -7,7 +7,7 @@ use std::{
         Mutex, OnceLock,
     },
     thread,
-    time::{Duration, Instant},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 use tauri::{Emitter, LogicalSize, Manager, PhysicalPosition, Position, WebviewWindow};
 #[cfg(windows)]
@@ -254,6 +254,10 @@ fn read_codex_usage_blocking() -> Result<Value, String> {
     let usage = server
         .request(4, "account/usage/read", Some(json!({})))
         .ok();
+    let sampled_at_ms = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .ok()
+        .and_then(|duration| u64::try_from(duration.as_millis()).ok());
     let (windows, models) = normalize_rate_limits(&limits);
     let plan = account
         .as_ref()
@@ -272,6 +276,7 @@ fn read_codex_usage_blocking() -> Result<Value, String> {
       "source": "tauri-codex-app-server",
       "fidelity": "official",
       "updatedAt": Value::Null,
+      "sampledAtMs": sampled_at_ms,
       "plan": plan,
       "windows": windows,
       "models": models,

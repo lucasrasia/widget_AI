@@ -1,6 +1,6 @@
 [package]
 name = "widgetaai"
-version = "0.1.1"
+version = "0.1.2"
 description = "Compact Codex usage overlay for Windows"
 authors = ["Lucas Rasia"]
 license = ""

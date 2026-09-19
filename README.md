@@ -1,6 +1,6 @@
 # WidgetaAI
 
-WidgetaAI is a compact Windows overlay that reads official Codex account rate-limit and aggregate token-activity data through the locally installed Codex App Server. Version `0.1.1` has been built and smoke-tested locally; its Windows installer is unsigned.
+WidgetaAI is a compact Windows overlay that reads official Codex account rate-limit and aggregate token-activity data through the locally installed Codex App Server. Version `0.1.2` has been built and passed the automated checks; its Windows installer is unsigned.
 
 ## Build prerequisites
 
@@ -40,7 +40,7 @@ git diff --check
 
 `desktop:check` discovers Visual Studio Build Tools with `vswhere`, imports the x64 developer environment, rejects the unrelated Git `link.exe`, verifies the Windows SDK resource compiler, and then runs both Rust test and check commands.
 
-After the prerequisites and checks pass, `npm run desktop:build` generates the Windows installer at `src-tauri/target/release/bundle/nsis/WidgetaAI_0.1.1_x64-setup.exe` and an MSI bundle in the adjacent `msi` directory.
+After the prerequisites and checks pass, `npm run desktop:build` generates the Windows installer at `src-tauri/target/release/bundle/nsis/WidgetaAI_0.1.2_x64-setup.exe` and an MSI bundle in the adjacent `msi` directory.
 
 ## Codex data contract and limitations
 
@@ -49,4 +49,5 @@ After the prerequisites and checks pass, `npm run desktop:build` generates the W
 - The account endpoint does not provide global per-model token totals, global cost, the currently active model, or task-completion state. WidgetaAI leaves those values unavailable instead of estimating them.
 - The protocol can return per-thread model and estimated-cost data only when a specific `threadId` is supplied. WidgetaAI does not infer a thread ID from account activity.
 - Native reads are cached for 30 seconds. A failed refresh preserves the last successful snapshot as stale; each App Server request has an 8-second timeout.
+- The mascot infers token activity from consecutive fresh readings of the aggregate counter: blue after an increase, then green for 15 seconds after the next unchanged reading. This can lag behind generation and does not confirm that a task has completed.
 - `account/usage/read` requires Codex-service authentication. API-key-only and Bedrock authentication do not expose this account activity summary.

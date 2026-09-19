@@ -2,6 +2,7 @@ import { ChevronDown, ChevronUp, Pause, Play, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type FocusEvent } from 'react'
 import mascotOrb from './assets/mascot-orb.gif'
 import openaiMark from './assets/openai-mark.png'
+import { advanceMascotActivity, expireMascotActivity, INITIAL_MASCOT_ACTIVITY, type MascotActivityState } from './mascotActivity.mjs'
 import { createSession, migrateSessions, pauseSession, resumeSession, sessionDuration, sessionTokensUsed, type Session } from './sessionMetrics.mjs'
 import './App.css'
 
@@ -27,6 +28,7 @@ type UsageSnapshot = {
   windows: UsageWindowData[]
   models?: ModelUsage[]
   lifetimeTokens?: number | null
+  sampledAtMs?: number | null
   error: string | null
   source?: string
   fidelity?: Exclude<UsageFidelity, 'unavailable'>
@@ -138,6 +140,7 @@ function MainWidget() {
   const [creatingPeriod, setCreatingPeriod] = useState(false)
   const [periodName, setPeriodName] = useState('')
   const [tooltipModelId, setTooltipModelId] = useState<string | null>(null)
+  const [mascotActivity, setMascotActivity] = useState<MascotActivityState>(INITIAL_MASCOT_ACTIVITY)
   const [sessions, setSessions] = useState<Session[]>(() => {
     try {
       if (migrateSessions(window.localStorage, SESSIONS_KEY, SESSIONS_MIGRATION_KEY, SESSIONS_MIGRATION_VERSION)) return []
@@ -161,7 +164,8 @@ function MainWidget() {
   const fiveHourWindow = usage.windows.find((item) => item.windowDurationMins === 300)
   const weeklyWindow = usage.windows.find((item) => item.windowDurationMins === 10_080)
   const fallbackFidelity: UsageFidelity = usage.status === 'ready' ? usage.fidelity ?? 'official' : usage.status === 'stale' ? usage.fidelity ?? 'derived' : 'unavailable'
-  const modelUsages = useMemo<ModelUsage[]>(() => usage.models?.length ? usage.models : [{
+  const modelUsages = useMemo<ModelUsage[]>(() => {
+    const models = usage.models?.length ? usage.models : [{
     id: 'codex-aggregate',
     provider: 'OpenAI',
     model: 'Codex',
@@ -173,7 +177,15 @@ function MainWidget() {
     fidelity: fallbackFidelity,
     updatedAt: usage.updatedAt,
     aggregate: true,
-  }], [fallbackFidelity, fiveHourWindow, usage.models, usage.updatedAt, weeklyWindow])
+    }]
+    return usage.status === 'ready' ? models : models.map((model) => ({
+      ...model,
+      usedPercent: null,
+      fiveHour: undefined,
+      weekly: undefined,
+      fidelity: 'unavailable',
+    }))
+  }, [fallbackFidelity, fiveHourWindow, usage.models, usage.status, usage.updatedAt, weeklyWindow])
   const visibleModels = modelUsages.slice(0, 3)
   const hiddenModelCount = Math.max(0, modelUsages.length - visibleModels.length)
   const tooltipModel = modelUsages.find((model) => model.id === tooltipModelId) ?? null
@@ -186,6 +198,16 @@ function MainWidget() {
   const knownCost = modelUsages.every((model) => model.cost !== null) ? modelUsages.reduce((sum, model) => sum + (model.cost ?? 0), 0) : null
 
   useEffect(() => { window.localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions)) }, [sessions])
+  useEffect(() => {
+    if (mascotActivity.phase !== 'completed' || mascotActivity.greenUntil === null) return
+    const timer = window.setTimeout(() => {
+      setMascotActivity((current) => expireMascotActivity(current, Date.now()))
+    }, Math.max(0, mascotActivity.greenUntil - Date.now()))
+    return () => window.clearTimeout(timer)
+  }, [mascotActivity.phase, mascotActivity.greenUntil])
+  useEffect(() => {
+    if (usage.windows.length) window.localStorage.setItem(USAGE_CACHE_KEY, JSON.stringify(usage))
+  }, [usage])
   useEffect(() => {
     if (!activeSessionCount) return
     const timer = window.setInterval(() => setNow(Date.now()), 1_000)
@@ -215,7 +237,10 @@ function MainWidget() {
   }, [isTauri])
   useEffect(() => {
     let active = true
+    let inFlight = false
     async function readUsage() {
+      if (inFlight) return
+      inFlight = true
       try {
         const snapshot = isTauri
           ? await import('@tauri-apps/api/core').then(({ invoke }) => invoke<UsageSnapshot>('read_codex_usage'))
@@ -224,19 +249,35 @@ function MainWidget() {
             return response.json() as Promise<UsageSnapshot>
           })
         if (!active) return
-        const next = { ...snapshot, updatedAt: snapshot.updatedAt ?? new Date().toISOString() }
-        setUsage(next)
-        window.localStorage.setItem(USAGE_CACHE_KEY, JSON.stringify(next))
+        setMascotActivity((current) => advanceMascotActivity(current, snapshot, Date.now()))
+        setUsage((previous) => ({
+          ...snapshot,
+          updatedAt: snapshot.status === 'ready'
+            ? snapshot.updatedAt ?? new Date().toISOString()
+            : snapshot.updatedAt ?? previous.updatedAt,
+        }))
       } catch {
         if (!active) return
+        setMascotActivity(INITIAL_MASCOT_ACTIVITY)
         setUsage((value) => value.windows.length
           ? { ...value, status: 'stale', error: 'Última leitura preservada.' }
           : { ...EMPTY_USAGE, status: 'unavailable', error: 'Leitura do Codex indisponível.' })
+      } finally {
+        inFlight = false
       }
     }
     void readUsage()
     const timer = window.setInterval(() => void readUsage(), 30_000)
-    return () => { active = false; window.clearInterval(timer) }
+    const refreshOnFocus = () => { void readUsage() }
+    const refreshWhenVisible = () => { if (!document.hidden) void readUsage() }
+    window.addEventListener('focus', refreshOnFocus)
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+    return () => {
+      active = false
+      window.clearInterval(timer)
+      window.removeEventListener('focus', refreshOnFocus)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+    }
   }, [isTauri])
   useEffect(() => () => {
     if (closeTimer.current) window.clearTimeout(closeTimer.current)
@@ -298,7 +339,7 @@ function MainWidget() {
     <div className={`widget-shell ${expanded ? 'is-expanded' : ''} ${tooltipModelId ? 'has-tooltip' : ''}`} style={shellStyle}>
       {tooltipModel && !expanded && !isTauri && <TooltipBody model={tooltipModel} left={tooltipLeft} arrow={tooltipArrow} onEnter={cancelClose} onLeave={() => closeTooltip()} />}
       <section className={`compact-widget ${expanded ? 'is-expanded' : ''}`} data-tauri-drag-region>
-        <div className="mascot-stage mascot-orb mascot-orb--idle" aria-label="Indicador: em espera"><span className="mascot-orb__frame"><img src={mascotOrb} alt="" /></span></div>
+        <div className={`mascot-stage mascot-orb mascot-orb--${mascotActivity.phase}`} aria-label={mascotActivity.phase === 'processing' ? 'Indicador: novos tokens detectados' : mascotActivity.phase === 'completed' ? 'Indicador: sem novos tokens' : 'Indicador: em espera'}><span className="mascot-orb__frame"><img src={mascotOrb} alt="" /></span></div>
         <div className="compact-content">
           <div className="summary-row"><strong>USO ATUAL</strong><strong>{formatTokens(knownTokens)}</strong><strong>{formatCost(knownCost)}</strong></div>
           <div className={`model-row model-row--${Math.min(visibleModels.length, 3)}`}>

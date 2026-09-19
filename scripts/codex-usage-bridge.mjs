@@ -9,9 +9,9 @@ const PORT = Number(process.env.WIDGETA_USAGE_PORT ?? 5191)
 const POLL_INTERVAL_MS = 45_000
 const REQUEST_TIMEOUT_MS = 8_000
 const RESTART_DELAY_MS = 10_000
-const clientInfo = { name: 'widgetaai', title: 'WidgetaAI', version: '0.1.0' }
+const clientInfo = { name: 'widgetaai', title: 'WidgetaAI', version: '0.1.2' }
 
-let latest = { status: 'loading', source: 'codex-app-server', updatedAt: null, plan: null, windows: [], models: [], lifetimeTokens: null, error: null }
+let latest = { status: 'loading', source: 'codex-app-server', updatedAt: null, sampledAtMs: null, plan: null, windows: [], models: [], lifetimeTokens: null, error: null }
 let child = null
 let buffer = ''
 let nextId = 1
@@ -218,10 +218,12 @@ async function refreshOnce() {
     send('account/usage/read', {}).catch(() => null),
   ])
   const { windows, models } = normalizeRateLimits(limits)
+  const sampledAtMs = Date.now()
   latest = {
     status: 'ready',
     source: 'codex-app-server',
-    updatedAt: new Date().toISOString(),
+    updatedAt: new Date(sampledAtMs).toISOString(),
+    sampledAtMs,
     plan: account?.account?.planType ?? limits?.rateLimits?.planType ?? null,
     windows,
     models,
